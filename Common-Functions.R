@@ -116,3 +116,13 @@ perform_fpca <- function(basis_expansion, time_grid, num_basis=240, num_scores=9
   # Return list of values
   list(eigenfunctions_eval = eigenfunctions_eval, scores = scores, variance_explained = variance_explained)
 }
+
+# Define function that combines MCMC models
+combined_MCMC_function <- function(distribution = MCMC_function_Normal, a_0, b_0, omega_0, theta_0, niter, burn_in = 10000, y = y, xi = xi, c = NULL, d = NULL) {
+  if(is.null(c) && is.null(d)){
+    result <- distribution(a_0, b_0, omega_0, theta_0, niter, burn_in, y, xi)
+  } else {
+    result <- distribution(a_0, b_0, c, d, omega_0, theta_0, niter, burn_in, y, xi)
+  }
+  return(result)
+}

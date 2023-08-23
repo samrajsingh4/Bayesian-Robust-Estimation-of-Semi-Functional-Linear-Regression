@@ -1,5 +1,14 @@
-## Load data
+# load necessary libraries and functions
+library(fda)
+library(MASS)
+library(xtable)
 library(fda.usc) 
+library(coda)
+library(ggplot2)
+source('MCMC_Functions.R')
+source('Common-Functions.R')
+
+# Load data
 data(tecator) 
 
 # Extract t range
@@ -25,13 +34,7 @@ matplot(t, t(absorp), type = "l", lty = 1, col=rainbow(ncol(absorp)),
         main = "Absorbance Spectrum of Meat Samples",
         las=1) 
 
-
-final_results <- list()
-results <- list()
-MSE_results <- list()
-SD_results <- list()
-final_results_DIC <- data.frame()
-final_results_MSE <- data.frame()
+distributions = list('Normal' = MCMC_function_Normal, 'Student-t' = MCMC_function_T, 'CN' = MCMC_function_CN, 'Slash' = MCMC_function_Slash)
 
 # Initialise accumulators
 dic_scores_accum <- setNames(rep(0, length(names(distributions))), names(distributions))
@@ -48,7 +51,7 @@ beta_sd_accum <- setNames(vector("list", length(names(distributions))), names(di
 
 # Run MCMC functions 100 times for each distribution
 set.seed(123)
-for (i in 1:1) {
+for (i in 1:100) {
   print(i)
   for(name in names(distributions)) {
     if(name == 'Normal'){
@@ -81,7 +84,7 @@ for (i in 1:1) {
   }
 }
 
-# Calulate average values of selcetion criteria
+# Calculate average values of selection criteria
 avg_scores <- list(
   DIC = dic_scores_accum / 100,
   EAIC = eaic_scores_accum / 100,
@@ -102,6 +105,7 @@ hpd_tauE_accum_divided <- lapply(hpd_tauE_accum, function(df) df / 100)
 average_tauE <- tauE_mean_accum / 100
 average_sd_tauE <- tauE_sd_accum / 100
 
+# Set models and initialise data
 models <- c("Normal", "Student-t", "CN", "Slash")
 data_list <- list()
 
@@ -160,3 +164,35 @@ polygon(c(t, rev(t)), c(result_upper, rev(result_lower)), col = 'grey80', border
 
 # Add line over shaded area
 lines(t, result, col = "black")
+
+# Set variance explained by FPCs
+variance_explained <- fpca_results_absorp$variance_explained
+
+# Compute cumulative variance explained
+cum_sum <- cumsum(variance_explained)
+
+# Create a dataframe with the data for the plots
+explained_data <- data.frame(
+  PC = 1:length(variance_explained),
+  Var = variance_explained,
+  Cum_sum = cum_sum
+)
+
+# Calculate how many FPCs explain specified variance
+var_80 <- which.max(cum_sum >= .999999)
+
+# Plot the cumulative variance explained 
+ggplot(explained_data, aes(x = PC, y = Cum_sum)) +
+  geom_point() +
+  geom_line() +
+  geom_hline(yintercept = 0.999999, linetype="dashed", color = "red") +
+  geom_vline(xintercept = var_80, linetype="dashed", color = "red") +
+  annotate("text", x = var_80, y = 0.999999, label = paste("FPC", var_80), vjust = -2, hjust = -0.5) +
+  xlab("Functional Principal Component") +
+  ylab("Cumulative Proportion of Variance Explained") +
+  ggtitle("Cumulative Variance Explained by FPCs") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.minor = element_blank()
+  )

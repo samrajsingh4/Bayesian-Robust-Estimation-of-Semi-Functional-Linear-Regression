@@ -87,7 +87,7 @@ simulate_functional_data <- function(sample_size, num_obs, num_bases, time_grid,
 
 #########################SIMULATION 2###########################################
 # Define function to generate random coefficients
-generate_random_coeffs <- function(sample_size, num_bases) {
+generate_random_coeffs2 <- function(sample_size, num_bases) {
   matrix(rnorm(sample_size * num_bases, 0, 1), ncol = num_bases)
 }
 
@@ -116,7 +116,7 @@ simulate_functional_data_polynomial <- function(sample_size, num_obs, num_bases,
   observation_times <- seq(0, 1, length=num_obs)
   
   # Generate simulated data values from functions
-  random_coeffs <- generate_random_coeffs(sample_size, num_bases)
+  random_coeffs <- generate_random_coeffs2(sample_size, num_bases)
   basis_expansion <- generate_polynomial_expansion(sample_size, num_obs, random_coeffs, observation_times)
   true_beta <- generate_true_beta_polynomial(num_obs, observation_times)
   

@@ -1,3 +1,12 @@
+# load necessary libraries and functions
+library(fda)
+library(MASS)
+library(xtable)
+library(ggplot2)
+source('MCMC_Functions.R')
+source('Common-Functions.R')
+source('Simulated-Dataset-1&2-Functions.R')
+
 # Assign error types, and models
 error_types <- c("Normal", "t", "Cauchy", "CN", "Mixture")
 distributions = list('Normal' = MCMC_function_Normal, 'Student-t' = MCMC_function_T, 'CN' = MCMC_function_CN, 'Slash' = MCMC_function_Slash)
@@ -5,13 +14,6 @@ distributions = list('Normal' = MCMC_function_Normal, 'Student-t' = MCMC_functio
 # Initialise result variables
 final_results <- list()
 final_results_b <- list()
-results <- list()
-MSE_results <- list()
-final_results_DIC <- data.frame()
-final_results_MSE <- data.frame()
-final_results_EAIC <- data.frame()
-final_results_EBIC <- data.frame()
-final_results_LPML <- data.frame()
 
 # Set sample size
 sample_size <- 100
@@ -121,4 +123,44 @@ for (error_type in error_types) {
 # Print tables
 print(final_results, digits = 2)
 print(final_results_b, digits = 5)
+
+# set.seed for reproducibility
+set.seed(123)
+
+# Generate data and perform FPCA
+simulated_data <- simulate_functional_data_polynomial(sample_size, num_obs, num_bases, time_grid, "Normal")
+basis_expansion <- simulated_data$basis_expansion
+fpca_results <- perform_fpca(basis_expansion, time_grid, num_basis = 100, num_scores = 4)
+
+# Set variance explained by FPCs
+variance_explained <- fpca_results$variance_explained
+
+# Compute cumulative variance explained
+cum_sum <- cumsum(variance_explained)
+
+# Create a dataframe with the data for the plots
+explained_data <- data.frame(
+  PC = 1:length(variance_explained),
+  Var = variance_explained,
+  Cum_sum = cum_sum
+)
+
+# Calculate how many FPCs explain specified variance
+var_80 <- which.max(cum_sum >= .99)
+
+# Plot the cumulative variance explained 
+ggplot(explained_data, aes(x = PC, y = Cum_sum)) +
+  geom_point() +
+  geom_line() +
+  geom_hline(yintercept = 0.999, linetype="dashed", color = "red") +
+  geom_vline(xintercept = var_80, linetype="dashed", color = "red") +
+  annotate("text", x = var_80, y = 0.999, label = paste("FPC", var_80), vjust = -2, hjust = -0.5) +
+  xlab("Functional Principal Component") +
+  ylab("Cumulative Proportion of Variance Explained") +
+  ggtitle("Cumulative Variance Explained by FPCs") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    panel.grid.minor = element_blank()
+  )
 
